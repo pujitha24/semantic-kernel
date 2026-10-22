@@ -140,6 +140,8 @@ class KernelFunctionFromMethod(KernelFunction):
                 return [self._parse_parameter(item, item_type) for item in value]
             raise FunctionExecutionException(f"Expected a list for {param_type}, but got {type(value)}")
         else:
+            if inspect.isclass(param_type) and not hasattr(param_type, "__origin__") and isinstance(value, param_type):
+                return value
             try:
                 if isinstance(value, dict) and hasattr(param_type, "__init__"):
                     return param_type(**value)

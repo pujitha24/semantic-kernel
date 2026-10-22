@@ -2,6 +2,7 @@
 import logging
 from collections.abc import AsyncGenerator, Iterable
 from contextlib import nullcontext
+from dataclasses import dataclass
 from importlib import import_module
 from typing import Annotated, Any
 from unittest.mock import Mock, patch
@@ -166,6 +167,28 @@ def test_init_invalid_name():
 
     with pytest.raises(FunctionInitializationError):
         KernelFunction.from_method(method=invalid_name, plugin_name="MockPlugin")
+
+
+@dataclass
+class _Customer:
+    customer_id: str
+    name: str
+
+
+@pytest.mark.parametrize(
+    "customer",
+    [{"customer_id": "C-123", "name": "Ada"}, _Customer("C-123", "Ada")],
+    ids=["dict", "instance"],
+)
+async def test_invoke_dataclass_argument(kernel: Kernel, customer):
+    @kernel_function()
+    def greet(customer: _Customer) -> str:
+        return f"{customer.customer_id}: {customer.name}"
+
+    native_function = KernelFunction.from_method(method=greet, plugin_name="MockPlugin")
+
+    result = await native_function.invoke(kernel=kernel, arguments=KernelArguments(customer=customer))
+    assert result.value == "C-123: Ada"
 
 
 async def test_invoke_non_async(kernel: Kernel):
